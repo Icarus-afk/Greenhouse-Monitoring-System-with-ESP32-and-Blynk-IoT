@@ -1,3 +1,4 @@
+#include <ESP32Servo.h>
 #include<BlynkSimpleEsp32.h>
 #include "DHT.h"
 #include <Wire.h>
@@ -8,6 +9,7 @@
 #include<WiFiClient.h>
 
 
+#define SERVO_PIN 13 // ESP32 pin GIOP26 connected to servo motor
 #define BLYNK_PRINT Serial
 #define BLYNK_TEMPLATE_ID "TMPL26cODGLX"
 #define BLYNK_DEVICE_NAME "Greenhouse Monitoring System"
@@ -40,6 +42,7 @@ char auth[] = BLYNK_AUTH_TOKEN;
 char ssid[] = "Ahad (Shadhinota net)";
 char pass[] = "abiba0206";
 
+Servo servoMotor;
 BlynkTimer timer;
 
 TwoWire I2CPIN = TwoWire(0);
@@ -53,6 +56,7 @@ void setup() {
   Serial.begin(115200);
   Blynk.begin(auth, ssid, pass, "blynk.cloud", 80);
   timer.setInterval(500L, myTimer);
+  servoMotor.attach(SERVO_PIN);
   Serial.println(F("DHTxx test!"));
   dht.begin();
   Serial.println(F("sensor test"));
@@ -72,7 +76,6 @@ void setup() {
 
   lightmeter.powerOn();
   lightmeter.setContHighRes();
-  pinMode(FANpin, OUTPUT);
   delayTime = 1000;
 
   Serial.println();
@@ -112,10 +115,9 @@ void take_value() {
   else {
     fan = 0;
   }
-  while(fan ==1){
-    digitalWrite(FANpin, HIGH);
-  }
-  print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
+servo(fan);
+print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
+
 }
 
 void print(int humidity, int temperature, int altitude, int pressure, int sealevelpressure, int soilhumidity, int rain, float lightlux) {
@@ -145,4 +147,13 @@ void print(int humidity, int temperature, int altitude, int pressure, int sealev
   Serial.println(" lux");
   Serial.println("\n");
   Blynk.virtualWrite(V1, temperature);
+}
+void servo(int rain){
+    while(fan ==1){
+    for (int pos = 0; pos <= 180; pos += 1) {
+    // in steps of 1 degree
+    servoMotor.write(pos);
+    delay(10); // waits 15ms to reach the position
+  }
+    }
 }
