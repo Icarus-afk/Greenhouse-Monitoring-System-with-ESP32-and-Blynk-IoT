@@ -22,7 +22,7 @@
 #define I2C_SCL1 32
 #define DHTTYPE DHT11   // DHT 11  (AM2302),
 #define SEALEVELPRESSURE_HPA (1013.25)
-#define rainAnalog 26
+#define rainAnalog 35
 #define RELAY_PIN  2
 
 
@@ -96,7 +96,6 @@ void myTimer()
   Blynk.virtualWrite(V5, soilhumidity);
   Blynk.virtualWrite(V6, rain);
   Blynk.virtualWrite(V7, lightlux);
-  Blynk.virtualWrite(V8, fan);
 }
 void take_value() {
   humidity = dht.readHumidity();
@@ -107,7 +106,8 @@ void take_value() {
   inpsoilhumidity = analogRead(AOUT_PIN);
   soilhumidity = map(inpsoilhumidity, 1400, 4029, 100, 0);
   inprain = analogRead(rainAnalog);
-  rain = map(inprain, 0, 4029, 0, 100);
+  Serial.println(inprain);
+  rain = map(inprain, 0, 4029, 100, 0);
   lightlux = lightmeter.getLux();
   if (temperature > 29.0) {
     fan = 1;
@@ -115,7 +115,6 @@ void take_value() {
   else {
     fan = 0;
   }
-servo(fan);
 print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
 
 }
@@ -146,14 +145,4 @@ void print(int humidity, int temperature, int altitude, int pressure, int sealev
   Serial.print(lightlux, 1);
   Serial.println(" lux");
   Serial.println("\n");
-  Blynk.virtualWrite(V1, temperature);
-}
-void servo(int rain){
-    while(fan ==1){
-    for (int pos = 0; pos <= 180; pos += 1) {
-    // in steps of 1 degree
-    servoMotor.write(pos);
-    delay(10); // waits 15ms to reach the position
-  }
-    }
 }
