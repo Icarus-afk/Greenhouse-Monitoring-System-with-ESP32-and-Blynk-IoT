@@ -21,6 +21,8 @@
 #define DHTTYPE DHT11   // DHT 11  (AM2302),
 #define SEALEVELPRESSURE_HPA (1013.25)
 #define rainAnalog 26
+#define RELAY_PIN  2
+
 
 int humidity = 0;
 float temperature = 0;
@@ -32,6 +34,7 @@ int soilhumidity = 0;
 int inprain = 0;
 int rain = 0;
 float lightlux = 0;
+int fan = 0;
 
 char auth[] = BLYNK_AUTH_TOKEN;
 char ssid[] = "Ahad (Shadhinota net)";
@@ -66,12 +69,12 @@ void setup() {
     Serial.println("Could not find a valid light meter sensor, check wiring!");
     while (1);
   }
-  
+
   lightmeter.powerOn();
   lightmeter.setContHighRes();
-
+  pinMode(FANpin, OUTPUT);
   delayTime = 1000;
-  
+
   Serial.println();
 }
 
@@ -80,50 +83,66 @@ void loop() {
   Blynk.run();
   timer.run();
 }
-void myTimer() 
+void myTimer()
 {
-  Blynk.virtualWrite(V1, temperature);  
+  Blynk.virtualWrite(V0, humidity);
+  Blynk.virtualWrite(V1, temperature);
+  Blynk.virtualWrite(V2, altitude);
+  Blynk.virtualWrite(V3, pressure);
+  Blynk.virtualWrite(V4, sealevelpressure);
+  Blynk.virtualWrite(V5, soilhumidity);
+  Blynk.virtualWrite(V6, rain);
+  Blynk.virtualWrite(V7, lightlux);
+  Blynk.virtualWrite(V8, fan);
 }
-void take_value(){
-     humidity = dht.readHumidity();
-     temperature = bmp.readTemperature();
-     altitude = bmp.readAltitude();
-     pressure = bmp.readPressure();
-     sealevelpressure = bmp.readSealevelPressure();
-     inpsoilhumidity = analogRead(AOUT_PIN);
-     soilhumidity = map(inpsoilhumidity, 1400, 4029, 100, 0);
-     inprain = analogRead(rainAnalog);
-     rain = map(inprain, 1200, 4029, 100, 0);
-     lightlux = lightmeter.getLux();;
-     print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
-    
+void take_value() {
+  humidity = dht.readHumidity();
+  temperature = bmp.readTemperature();
+  altitude = bmp.readAltitude();
+  pressure = bmp.readPressure();
+  sealevelpressure = bmp.readSealevelPressure();
+  inpsoilhumidity = analogRead(AOUT_PIN);
+  soilhumidity = map(inpsoilhumidity, 1400, 4029, 100, 0);
+  inprain = analogRead(rainAnalog);
+  rain = map(inprain, 0, 4029, 0, 100);
+  lightlux = lightmeter.getLux();
+  if (temperature > 29.0) {
+    fan = 1;
+  }
+  else {
+    fan = 0;
+  }
+  while(fan ==1){
+    digitalWrite(FANpin, HIGH);
+  }
+  print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
 }
- 
-void print(int humidity, int temperature, int altitude, int pressure, int sealevelpressure, int soilhumidity, int rain, float lightlux){
-    Serial.print("Humidity: ");
-    Serial.print(humidity);
-    Serial.println("%");
-    Serial.print("Temperature: ");
-    Serial.print(temperature);
-    Serial.println(" C");
-    Serial.print("altitude");
-    Serial.print(altitude);
-    Serial.println(" meters");
-    Serial.print("Pressure: ");
-    Serial.print(pressure);
-    Serial.println(" Pa");
-    Serial.print("Sea Level Pressure: ");
-    Serial.print(sealevelpressure);
-    Serial.println(" Pa");
-    Serial.print("Soil humidity: ");
-    Serial.print(soilhumidity);
-    Serial.println("%");
-    Serial.print("Rain level: ");
-    Serial.print(rain);
-    Serial.println("%");
-    Serial.print("Light level (LUX): ");
-    Serial.print(lightlux, 1);
-    Serial.println(" lux");
-    Serial.println("\n");  
-    Blynk.virtualWrite(V1, temperature);
+
+void print(int humidity, int temperature, int altitude, int pressure, int sealevelpressure, int soilhumidity, int rain, float lightlux) {
+  Serial.print("Humidity: ");
+  Serial.print(humidity);
+  Serial.println("%");
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.println(" C");
+  Serial.print("altitude");
+  Serial.print(altitude);
+  Serial.println(" meters");
+  Serial.print("Pressure: ");
+  Serial.print(pressure);
+  Serial.println(" Pa");
+  Serial.print("Sea Level Pressure: ");
+  Serial.print(sealevelpressure);
+  Serial.println(" Pa");
+  Serial.print("Soil humidity: ");
+  Serial.print(soilhumidity);
+  Serial.println("%");
+  Serial.print("Rain level: ");
+  Serial.print(rain);
+  Serial.println("%");
+  Serial.print("Light level (LUX): ");
+  Serial.print(lightlux, 1);
+  Serial.println(" lux");
+  Serial.println("\n");
+  Blynk.virtualWrite(V1, temperature);
 }
