@@ -25,7 +25,8 @@
 #define rainAnalog 35
 #define RELAY_PIN  2
 
-
+int pos1=0;
+int pos2;
 int humidity = 0;
 float temperature = 0;
 float altitude = 0;
@@ -109,13 +110,8 @@ void take_value() {
   Serial.println(inprain);
   rain = map(inprain, 0, 4029, 100, 0);
   lightlux = lightmeter.getLux();
-  if (temperature > 29.0) {
-    fan = 1;
-  }
-  else {
-    fan = 0;
-  }
-print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
+  check_val(temperature);
+  print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
 
 }
 
@@ -145,4 +141,23 @@ void print(int humidity, int temperature, int altitude, int pressure, int sealev
   Serial.print(lightlux, 1);
   Serial.println(" lux");
   Serial.println("\n");
+}
+
+void check_val(int temperature) {
+  if (temperature > 29.0) {
+    fan = 1;
+  }
+  else {
+    fan = 0;
+  }
+  if(fan==1 && pos1==0){
+    servoMotor.write(90);
+    pos1 = 90;
+    delay(20);
+  }
+  else if(fan==0 && pos1==90){
+    servoMotor.write(0);
+    pos1 = 0;
+    delay(20);
+  }
 }
