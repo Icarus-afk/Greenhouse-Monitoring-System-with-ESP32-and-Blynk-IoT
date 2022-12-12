@@ -9,49 +9,51 @@
 #include<WiFiClient.h>
 
 
-#define SERVO_PIN 13 // ESP32 pin GIOP26 connected to servo motor
+#define SERVO_PIN 13 // ESP32 pin GIOP13 connected to servo motor
 #define BLYNK_PRINT Serial
 #define BLYNK_TEMPLATE_ID "TMPL26cODGLX"
 #define BLYNK_DEVICE_NAME "Greenhouse Monitoring System"
 #define BLYNK_AUTH_TOKEN "7S11cvWxwYQ2t7tWYSc4vMOsEvQMWZ-d"
-
 #define AOUT_PIN 34 // ESP32 pin GIOP34 
-#define THRESHOLD 2047
 #define DHTPIN 4     // Digital pin connected to the DHT sensor
 #define I2C_SDA1 33
 #define I2C_SCL1 32
 #define DHTTYPE DHT11   // DHT 11  (AM2302),
 #define SEALEVELPRESSURE_HPA (1013.25)
 #define rainAnalog 35
-#define RELAY_PIN  2
 
+
+const float realalt = 3.28084;
 int pos1=0;
-int pos2;
 int humidity = 0;
 float temperature = 0;
 float altitude = 0;
 float pressure = 0;
 float sealevelpressure = 0;
-int inpsoilhumidity = 0;
 int soilhumidity = 0;
-int inprain = 0;
 int rain = 0;
 float lightlux = 0;
-int fan = 0;
-
+int flag_1 = 0;
+int flag_2 = 0;
+int flag_3 = 0;
 char auth[] = BLYNK_AUTH_TOKEN;
 char ssid[] = "Ahad (Shadhinota net)";
 char pass[] = "abiba0206";
+char server[] = "192.168.1.11";
 
 Servo servoMotor;
 BlynkTimer timer;
-
+WiFiClient client;
+DHT dht(DHTPIN, DHTTYPE);
 TwoWire I2CPIN = TwoWire(0);
 unsigned long delayTime;
-DHT dht(DHTPIN, DHTTYPE);
+
+BH1750FVI lightmeter(0x23, &I2CPIN);
+
+
 
 Adafruit_BMP085 bmp;
-BH1750FVI lightmeter(0x23, &I2CPIN);
+
 
 void setup() {
   Serial.begin(115200);
@@ -86,6 +88,7 @@ void loop() {
   take_value();
   Blynk.run();
   timer.run();
+  dbconnect();
 }
 void myTimer()
 {
@@ -101,20 +104,51 @@ void myTimer()
 void take_value() {
   humidity = dht.readHumidity();
   temperature = bmp.readTemperature();
-  altitude = bmp.readAltitude();
+  altitude = bmp.readAltitude()*realalt;
   pressure = bmp.readPressure();
   sealevelpressure = bmp.readSealevelPressure();
-  inpsoilhumidity = analogRead(AOUT_PIN);
-  soilhumidity = map(inpsoilhumidity, 1400, 4029, 100, 0);
-  inprain = analogRead(rainAnalog);
-  Serial.println(inprain);
-  rain = map(inprain, 0, 4029, 100, 0);
+  soilhumidity = analogRead(AOUT_PIN);
+  soilhumidity = constrain(soilhumidity, 1500,4029);
+  soilhumidity = map(soilhumidity, 1400, 4029, 100, 0);
+  rain = analogRead(rainAnalog);
+  rain = constrain(rain, 0,4029);
+  rain = map(rain, 0 , 4029, 100, 0);
   lightlux = lightmeter.getLux();
-  check_val(temperature);
+
+  check_val(soilhumidity, rain);
   print(humidity, temperature, altitude, pressure, sealevelpressure, soilhumidity, rain, lightlux);
 
 }
+void check_val(int soilhumidity, int rain) {
+  if (soilhumidity >= 50) {
+    flag_1 = 1;
+  }
+  else {
+    flag_1 = 0;
+  }
 
+  if (rain >= 40){
+    flag_2 = 1;
+  }
+  else{
+    flag_2 = 0;
+  }
+  if(flag_1==0 && flag_2 ==1 && pos1==0){
+    servoMotor.write(90);
+    pos1 = 90;
+    delay(10);
+  }
+  else if(flag_1==1 && flag_2 ==1 && pos1==90){
+    servoMotor.write(0);
+    pos1 = 0;
+    delay(10);
+  }
+  else if(flag_1==0 && flag_2 ==0 && pos1 == 90){
+    servoMotor.write(0);
+    pos1 = 0;
+    delay(10);
+  }
+}
 void print(int humidity, int temperature, int altitude, int pressure, int sealevelpressure, int soilhumidity, int rain, float lightlux) {
   Serial.print("Humidity: ");
   Serial.print(humidity);
@@ -143,21 +177,46 @@ void print(int humidity, int temperature, int altitude, int pressure, int sealev
   Serial.println("\n");
 }
 
-void check_val(int temperature) {
-  if (temperature > 29.0) {
-    fan = 1;
+void dbconnect(){
+  
+ if (client.connect(server, 80)) {
+    Serial.println("connected");
+    // Make a HTTP request:
+    Serial.print("GET /iot/connect.php?humidity=");
+    client.print("GET /iot/connect.php?humidity=");     //YOUR URL
+    Serial.print(humidity);
+    client.print(humidity);
+    client.print("&temperature=");
+    Serial.print("&temperature=");
+    client.print(temperature);
+    Serial.print(temperature);
+    client.print("&altitude=");
+    client.print(altitude);
+    Serial.print(altitude);
+    client.print("&pressure=");
+    client.print(pressure);
+    Serial.print(pressure);
+    client.print("&sealevelpressure=");
+    client.print(sealevelpressure);
+    Serial.print(sealevelpressure);
+    client.print("&soilhumidity=");
+    client.print(soilhumidity);
+    Serial.print(soilhumidity);
+    client.print("&rain=");
+    client.print(rain);
+    Serial.print(rain);
+    client.print("&lightlux=");
+    client.print(lightlux);
+    Serial.print(lightlux);
+    client.print(" ");      //SPACE BEFORE HTTP/1.1
+    client.print("HTTP/1.1");
+    client.println();
+    client.println("Host: 192.168.1.11");
+    client.println("Connection: close");
+    client.println();
+    delay(500);
+  } else {
+    // if you didn't get a connection to the server:
+    Serial.println("connection failed");
   }
-  else {
-    fan = 0;
-  }
-  if(fan==1 && pos1==0){
-    servoMotor.write(90);
-    pos1 = 90;
-    delay(20);
-  }
-  else if(fan==0 && pos1==90){
-    servoMotor.write(0);
-    pos1 = 0;
-    delay(20);
-  }
-}
+    }
